@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hierarchies</title>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script src="./static/data.js"></script>
+    <style>
+      path {
+        stroke: black;
+        fill: none;
+      }
+      text {
+        font-family: "Yanone Kaffeesatz", sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      const width = 1400,
+        height = 600;
+      const svg = d3
+        .select("body")
+        .append("svg")
+        .attr("height", height)
+        .attr("width", width);
+      const chart = svg
+        .append("g")
+        .attr("transform", (d) => `translate(${[60, 60]})`);
+
+      const root = d3.hierarchy(simpleHierarchy);
+      root.sort((a, b) => a.height - b.height);
+      chart.attr("transform", (d) => `translate(${[60, height / 2]})`);
+
+      const tree = d3.tree().nodeSize([40, 220]);
+      const treeData = tree(root);
+
+      const nodes = treeData.descendants();
+      const links = treeData.links();
+
+      const colorScale = d3
+        .scaleOrdinal(d3.schemeCategory10)
+        .domain(d3.extent(nodes, (n) => n.depth));
+      const widthScale = d3
+        .scaleLinear()
+        .range([1, 16])
+        .domain(d3.extent(links, (k) => k.target.height));
+
+      const horizontalLink = d3
+        .linkHorizontal()
+        .x(function (d) {
+          return d.y;
+        })
+        .y(function (d) {
+          return d.x;
+        });
+
+      // 矢印作成
+      svg
+        .append("svg:defs")
+        .selectAll("marker")
+        .data(links) // Different link/path types can be defined here
+        .enter()
+        .append("svg:marker") // This section adds in the arrows
+        .attr("id", "arrowhead")
+        .attr("viewBox", "0 -5 10 10")
+        .attr("refX", 10)
+        .attr("refY", 0)
+        .attr("markerWidth", 10)
+        .attr("markerHeight", 10)
+        .attr("orient", "auto")
+        .append("svg:path")
+        .attr("d", "M0,-5L10,0L0,5")
+        .style("fill", "black");
+
+      reDefLinks();
+      drawLinks();
+      drawNodes();
+      drawLabels();
+
+      function reDefLinks() {
+        // 親複数の場合、ノード位置を変更するためlinksを再定義
+        // ターゲットとなるNodeのIDリストを作成する
+        const target_id_list = [];
+        links.map((link, index) => {
+          target_id_list.push(link.target.data.id);
+          //[link.source.data.id, link.target.data.id]);
+        });
+        const sameIdList = [];
+        // 同一となるtargetIDのリストを作成する
+        target_id_list.map((tid, i) => {
+          let firstIndex = target_id_list.indexOf(tid);
+          let lastIndex = target_id_list.lastIndexOf(tid);
+          if (firstIndex !== lastIndex) {
+            dup_id = links[i].target.data.id;
+            if (sameIdList.indexOf(dup_id) === -1) {
+              sameIdList.push(dup_id);
+            }
+          }
+        });
+        // 同一ターゲットとなるIDのLinksでのインデックスを取得する
+        const target_id_index_list = [];
+        sameIdList.map((id, i) => {
+          const index_list = [];
+          links.map((link, index) => {
+            if (id === link.target.data.id) {
+              index_list.push(index);
+              target_id_index_list[id] = index_list;
+            }
+          });
+        });
+        //同一targetの座標を一致させる
+        sameIdList.map((d) => {
+          same_id = target_id_index_list[d];
+          same_id.map((id, i) => {
+            if (id !== Math.max(...same_id)) {
+              links[id].target.x = links[Math.max(...same_id)].target.x;
+              links[id].target.y = links[Math.max(...same_id)].target.y;
+            }
+          });
+        });
+      }
+
+      function drawLinks() {
+        chart
+          .selectAll("path")
+          .data(links)
+          .join("path")
+          .attr("d", (d) => {
+            // ラベルのお尻から線を引くために直線追加
+            path_list = horizontalLink(d).split("C");
+            path = path_list[0] + "h70C" + path_list[1];
+            return path;
+          })
+          // .attr("transform", (d) => `translate(${[80, 0]})`)
+          .style("stroke-width", 0.8)
+          .style("stroke", "gray")
+          .style("opacity", 1)
+          .attr("marker-end", "url(#arrowhead)");
+      }
+      function drawNodes() {
+        chart
+          .selectAll("g")
+          .data(nodes)
+          .join("g")
+          .attr("class", "node")
+          .attr("transform", (d) => `translate(${[d.y, d.x - 10]})`)
+          // .append("circle")
+          // .attr("r", 8)
+          .append("rect")
+          .attr("width", 80)
+          .attr("height", "20")
+          .attr("stroke", "black")
+          .style("opacity", 1)
+          .style("fill", (d) => colorScale(d.depth));
+      }
+      function drawLabels() {
+        // relative to node <g>
+        chart
+          .selectAll("g.node")
+          .append("text")
+          .text((d) => zeroPadding(d.data.name, 9))
+          .style("fill", "white")
+          .style("text-anchor", "start")
+          .style("alignment-baseline", "middle")
+          .style("font-size", 12)
+          .attr("dy", "0.75rem") //  12/16
+          .attr("dx", ".3rem");
+        //   .clone(true)
+        //   .lower()
+        //   .attr("stroke-linejoin", "round")
+        //   .attr("stroke-width", 3)
+        //   .attr("stroke", "black");
+      }
+
+      // NUM=値 LEN=桁数
+      function zeroPadding(NUM, LEN) {
+        return (Array(LEN).join("0") + NUM).slice(-LEN);
+      }
+    </script>
+  </body>
+</html>

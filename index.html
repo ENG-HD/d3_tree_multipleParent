@@ -24,13 +24,14 @@
   <body>
     <script>
       const width = 1200;
-
       const tree = (data) => {
         const root = d3.hierarchy(data);
         root.dx = 25;
         root.dy = width / (root.height + 1);
         return d3.tree().nodeSize([root.dx, root.dy])(root);
       };
+
+      isColor = false;
 
       const root = tree(simpleHierarchy);
       console.log(root);
@@ -44,8 +45,6 @@
         .select("body")
         .append("svg")
         .attr("viewBox", [0, 0, width, x1 - x0 + root.dx * 2]);
-      // .attr("height", height)
-      // .attr("width", width);
 
       const g = svg
         .append("g")
@@ -92,7 +91,22 @@
 
       node
         .append("rect")
-        .attr("fill", "green")
+        .attr("fill", (d) => {
+          if (!d.data.clasify) {
+            return "red";
+          } else if (d.data.clasify === "A") {
+            return "green";
+          } else if (d.data.clasify === "B") {
+            return "pink";
+          } else if (d.data.clasify === "C") {
+            return "black";
+          } else if (d.data.clasify === "D") {
+            return isColor ? "skyblue" : "gray";
+          } else if (d.data.clasify === "E") {
+            return isColor ? "darkblue" : "gray";
+          }
+          return "pink";
+        })
         .attr("width", 65)
         .attr("height", 15)
         .attr("transform", (d) => `translate(${2.8555}, ${-8})`)

@@ -6,6 +6,9 @@
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="./static/data.js"></script>
     <style>
+      * {
+        background-color: aqua;
+      }
       path {
         stroke: black;
         fill: none;
@@ -13,47 +16,97 @@
       text {
         font-family: "Yanone Kaffeesatz", sans-serif;
       }
+      svg {
+        background-color: #ffffe0;
+      }
     </style>
   </head>
   <body>
     <script>
-      const width = 1400,
-        height = 600;
+      const width = 1200;
+
+      const tree = (data) => {
+        const root = d3.hierarchy(data);
+        root.dx = 25;
+        root.dy = width / (root.height + 1);
+        return d3.tree().nodeSize([root.dx, root.dy])(root);
+      };
+
+      const root = tree(simpleHierarchy);
+      console.log(root);
+      let x0 = Infinity;
+      let x1 = -x0;
+      root.each((d) => {
+        if (d.x > x1) x1 = d.x;
+        if (d.x < x0) x0 = d.x;
+      });
       const svg = d3
         .select("body")
         .append("svg")
-        .attr("height", height)
-        .attr("width", width);
-      const chart = svg
+        .attr("viewBox", [0, 0, width, x1 - x0 + root.dx * 2]);
+      // .attr("height", height)
+      // .attr("width", width);
+
+      const g = svg
         .append("g")
-        .attr("transform", (d) => `translate(${[60, 60]})`);
+        .attr("font-family", "sans-serif")
+        .attr("font-size", 10)
+        .attr("transform", (d) => `translate(${[root.dy / 3, root.dx - x0]})`);
 
-      const root = d3.hierarchy(simpleHierarchy);
-      root.sort((a, b) => a.height - b.height);
-      chart.attr("transform", (d) => `translate(${[60, height / 2]})`);
-
-      const tree = d3.tree().nodeSize([40, 220]);
-      const treeData = tree(root);
-
-      const nodes = treeData.descendants();
-      const links = treeData.links();
-
-      const colorScale = d3
-        .scaleOrdinal(d3.schemeCategory10)
-        .domain(d3.extent(nodes, (n) => n.depth));
-      const widthScale = d3
-        .scaleLinear()
-        .range([1, 16])
-        .domain(d3.extent(links, (k) => k.target.height));
+      const links = reDefLinks(root.links());
 
       const horizontalLink = d3
         .linkHorizontal()
-        .x(function (d) {
-          return d.y;
-        })
-        .y(function (d) {
-          return d.x;
+        .x((d) => d.y - 2.5)
+        .y((d) => d.x);
+
+      const link = g
+        .append("g")
+        .attr("fill", "none")
+        .attr("stroke", "#555")
+        .attr("stroke-opacity", 0.4)
+        .attr("stroke-width", 0.8)
+        .attr("marker-end", "url(#arrowhead)")
+        .selectAll("path")
+        .data(links)
+        .join("path")
+        .attr("d", (d) => {
+          // ラベルのお尻から線を引くために直線追加
+          path_list = horizontalLink(d).split("C");
+          path = path_list[0] + "h65C" + path_list[1];
+          return path;
         });
+      const node = g
+        .append("g")
+        .attr("stroke-linejoin", "round")
+        .attr("stroke-width", 3)
+        .selectAll("g")
+        .data(root.descendants())
+        .join("g")
+        .attr("transform", (d) => `translate(${d.y}, ${d.x})`);
+
+      node
+        .append("circle")
+        .attr("fill", (d) => (d.children ? "red" : "#999"))
+        .attr("r", 2.5);
+
+      node
+        .append("rect")
+        .attr("fill", "green")
+        .attr("width", 65)
+        .attr("height", 15)
+        .attr("transform", (d) => `translate(${2.8555}, ${-8})`)
+        .attr("stroke", "black")
+        .style("stroke-width", 0.8);
+
+      node
+        .append("text")
+        .attr("dy", "0.31em")
+        .attr("x", 6)
+        .attr("text-anchor", "start")
+        .text((d) => zeroPadding(d.data.name, 9))
+        .attr("fill", "white");
+      // .clone(true).lower().attr("stroke", "white");
 
       // 矢印作成
       svg
@@ -66,19 +119,14 @@
         .attr("viewBox", "0 -5 10 10")
         .attr("refX", 10)
         .attr("refY", 0)
-        .attr("markerWidth", 10)
-        .attr("markerHeight", 10)
+        .attr("markerWidth", 5)
+        .attr("markerHeight", 5)
         .attr("orient", "auto")
         .append("svg:path")
         .attr("d", "M0,-5L10,0L0,5")
         .style("fill", "black");
 
-      reDefLinks();
-      drawLinks();
-      drawNodes();
-      drawLabels();
-
-      function reDefLinks() {
+      function reDefLinks(links) {
         // 親複数の場合、ノード位置を変更するためlinksを再定義
         // ターゲットとなるNodeのIDリストを作成する
         const target_id_list = [];
@@ -119,58 +167,7 @@
             }
           });
         });
-      }
-
-      function drawLinks() {
-        chart
-          .selectAll("path")
-          .data(links)
-          .join("path")
-          .attr("d", (d) => {
-            // ラベルのお尻から線を引くために直線追加
-            path_list = horizontalLink(d).split("C");
-            path = path_list[0] + "h70C" + path_list[1];
-            return path;
-          })
-          // .attr("transform", (d) => `translate(${[80, 0]})`)
-          .style("stroke-width", 0.8)
-          .style("stroke", "gray")
-          .style("opacity", 1)
-          .attr("marker-end", "url(#arrowhead)");
-      }
-      function drawNodes() {
-        chart
-          .selectAll("g")
-          .data(nodes)
-          .join("g")
-          .attr("class", "node")
-          .attr("transform", (d) => `translate(${[d.y, d.x - 10]})`)
-          // .append("circle")
-          // .attr("r", 8)
-          .append("rect")
-          .attr("width", 80)
-          .attr("height", "20")
-          .attr("stroke", "black")
-          .style("opacity", 1)
-          .style("fill", (d) => colorScale(d.depth));
-      }
-      function drawLabels() {
-        // relative to node <g>
-        chart
-          .selectAll("g.node")
-          .append("text")
-          .text((d) => zeroPadding(d.data.name, 9))
-          .style("fill", "white")
-          .style("text-anchor", "start")
-          .style("alignment-baseline", "middle")
-          .style("font-size", 12)
-          .attr("dy", "0.75rem") //  12/16
-          .attr("dx", ".3rem");
-        //   .clone(true)
-        //   .lower()
-        //   .attr("stroke-linejoin", "round")
-        //   .attr("stroke-width", 3)
-        //   .attr("stroke", "black");
+        return links;
       }
 
       // NUM=値 LEN=桁数

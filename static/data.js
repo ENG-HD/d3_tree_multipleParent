@@ -25,6 +25,7 @@ const simpleHierarchy = {
         {
           id: "74",
           name: "74",
+          mod: true,
           clasify: "E",
           children: [
             { id: "77", name: "77", clasify: "A" },
@@ -38,7 +39,7 @@ const simpleHierarchy = {
                   clasify: "B",
                   children: [],
                 },
-                { id: "f07", name: "f07", clasify: "C" },
+                { id: "f07", name: "f07", mod: true, clasify: "C" },
               ],
             },
             { id: "f06", clasify: "D", name: "f06" },
@@ -69,7 +70,7 @@ const simpleHierarchy = {
                   name: "91",
                   children: [
                     { id: "93", name: "93", clasify: "B" },
-                    { id: "f07", name: "f07", clasify: "C" },
+                    { id: "f07", name: "f07", mod: true, clasify: "C" },
                   ],
                 },
                 { id: "f06", name: "f06", clasify: "D" },
@@ -77,6 +78,7 @@ const simpleHierarchy = {
             },
           ],
         },
+
         { id: "91", name: "91", clasify: "A" },
         { id: "92", name: "92", clasify: "D" },
       ],

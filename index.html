@@ -9,13 +9,6 @@
       * {
         background-color: aqua;
       }
-      path {
-        stroke: black;
-        fill: none;
-      }
-      text {
-        font-family: "Yanone Kaffeesatz", sans-serif;
-      }
       svg {
         background-color: #ffffe0;
       }
@@ -34,7 +27,6 @@
       isColor = false;
 
       const root = tree(simpleHierarchy);
-      console.log(root);
       let x0 = Infinity;
       let x1 = -x0;
       root.each((d) => {
@@ -63,7 +55,7 @@
         .append("g")
         .attr("fill", "none")
         .attr("stroke", "#555")
-        .attr("stroke-opacity", 0.4)
+        .attr("stroke-opacity", 1)
         .attr("stroke-width", 0.8)
         .attr("marker-end", "url(#arrowhead)")
         .selectAll("path")
@@ -74,7 +66,11 @@
           path_list = horizontalLink(d).split("C");
           path = path_list[0] + "h65C" + path_list[1];
           return path;
+        })
+        .attr("stroke", (d) => {
+          return d.target.data.mod ? "red" : "gray";
         });
+
       const node = g
         .append("g")
         .attr("stroke-linejoin", "round")
@@ -86,27 +82,12 @@
 
       node
         .append("circle")
-        .attr("fill", (d) => (d.children ? "red" : "#999"))
+        .attr("fill", (d) => colorSetting(d))
         .attr("r", 2.5);
 
       node
         .append("rect")
-        .attr("fill", (d) => {
-          if (!d.data.clasify) {
-            return "red";
-          } else if (d.data.clasify === "A") {
-            return "green";
-          } else if (d.data.clasify === "B") {
-            return "pink";
-          } else if (d.data.clasify === "C") {
-            return "black";
-          } else if (d.data.clasify === "D") {
-            return isColor ? "skyblue" : "gray";
-          } else if (d.data.clasify === "E") {
-            return isColor ? "darkblue" : "gray";
-          }
-          return "pink";
-        })
+        .attr("fill", (d) => colorSetting(d))
         .attr("width", 65)
         .attr("height", 15)
         .attr("transform", (d) => `translate(${2.8555}, ${-8})`)
@@ -160,6 +141,7 @@
             }
           }
         });
+
         // 同一ターゲットとなるIDのLinksでのインデックスを取得する
         const target_id_index_list = [];
         sameIdList.map((id, i) => {
@@ -171,6 +153,7 @@
             }
           });
         });
+
         //同一targetの座標を一致させる
         sameIdList.map((d) => {
           same_id = target_id_index_list[d];
@@ -182,6 +165,23 @@
           });
         });
         return links;
+      }
+
+      function colorSetting(d) {
+        if (!d.data.clasify) {
+          return "red";
+        } else if (d.data.clasify === "A") {
+          return "green";
+        } else if (d.data.clasify === "B") {
+          return "pink";
+        } else if (d.data.clasify === "C") {
+          return "black";
+        } else if (d.data.clasify === "D") {
+          return isColor ? "skyblue" : "gray";
+        } else if (d.data.clasify === "E") {
+          return isColor ? "darkblue" : "gray";
+        }
+        return "pink";
       }
 
       // NUM=値 LEN=桁数

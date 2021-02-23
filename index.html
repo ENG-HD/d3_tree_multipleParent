@@ -16,16 +16,36 @@
   </head>
   <body>
     <script>
-      const width = 1200;
+      const colorSetting = (d) => {
+        if (!d.data.clasify) {
+          return "red";
+        } else if (d.data.clasify === "A") {
+          return "green";
+        } else if (d.data.clasify === "B") {
+          return "blue";
+        } else if (d.data.clasify === "C") {
+          return "black";
+        } else if (d.data.clasify === "D") {
+          return isColor ? "skyblue" : "gray";
+        } else if (d.data.clasify === "E") {
+          return isColor ? "darkblue" : "gray";
+        }
+        return "brown";
+      };
+      // NUM=値 LEN=桁数
+      const zeroPadding = (NUM, LEN) => {
+        return (Array(LEN).join("0") + NUM).slice(-LEN);
+      };
+
+      isColor = false;
+
+      const width = 1000;
       const tree = (data) => {
         const root = d3.hierarchy(data);
         root.dx = 25;
         root.dy = width / (root.height + 1);
         return d3.tree().nodeSize([root.dx, root.dy])(root);
       };
-
-      isColor = false;
-
       const root = tree(simpleHierarchy);
       let x0 = Infinity;
       let x1 = -x0;
@@ -33,6 +53,7 @@
         if (d.x > x1) x1 = d.x;
         if (d.x < x0) x0 = d.x;
       });
+
       const svg = d3
         .select("body")
         .append("svg")
@@ -48,7 +69,11 @@
 
       const horizontalLink = d3
         .linkHorizontal()
-        .x((d) => d.y - 2.5)
+        .x((d, i) => d.y - 2.5)
+        .y((d) => d.x);
+      const horizontalLink_reverse = d3
+        .linkHorizontal()
+        .x((d) => d.y + 67.5)
         .y((d) => d.x);
 
       const link = g
@@ -61,14 +86,24 @@
         .selectAll("path")
         .data(links)
         .join("path")
-        .attr("d", (d) => {
-          // ラベルのお尻から線を引くために直線追加
-          path_list = horizontalLink(d).split("C");
-          path = path_list[0] + "h65C" + path_list[1];
-          return path;
+        .attr("d", (d, i) => {
+          if (d.source.data.name === "03" && d.target.data.name === "02") {
+            // 逆向きの時
+            path_list = horizontalLink_reverse(d).split(",");
+            startPoint = Number(path_list[0].slice(1));
+            fix_startPoint = String(startPoint - 70);
+            path = ["M" + fix_startPoint, ...path_list.slice(1)].join();
+            return path;
+          } else {
+            // 順向の時
+            // ラベルのお尻から線を引くために直線追加
+            path_list = horizontalLink(d).split("C");
+            path = path_list[0] + "h65C" + path_list[1];
+            return path;
+          }
         })
         .attr("stroke", (d) => {
-          return d.target.data.mod ? "red" : "gray";
+          return d.target.data.mod ? "red" : "black";
         });
 
       const node = g
@@ -84,6 +119,7 @@
         .append("circle")
         .attr("fill", (d) => colorSetting(d))
         .attr("r", 2.5);
+      // .style("opacity", 0.3);
 
       node
         .append("rect")
@@ -93,6 +129,7 @@
         .attr("transform", (d) => `translate(${2.8555}, ${-8})`)
         .attr("stroke", "black")
         .style("stroke-width", 0.8);
+      // .style("opacity", 0.5);
 
       node
         .append("text")
@@ -101,6 +138,8 @@
         .attr("text-anchor", "start")
         .text((d) => zeroPadding(d.data.name, 9))
         .attr("fill", "white");
+      // .attr("fill", "black");
+
       // .clone(true).lower().attr("stroke", "white");
 
       // 矢印作成
@@ -164,29 +203,13 @@
             }
           });
         });
+        links.map((d, i) => {
+          if (d.source.data.name === "02" && d.target.data.name === "03") {
+            links.push({ source: links[i].target, target: links[i].source });
+            links[links.length - 1].source.y = links[links.length - 1].source.y;
+          }
+        });
         return links;
-      }
-
-      function colorSetting(d) {
-        if (!d.data.clasify) {
-          return "red";
-        } else if (d.data.clasify === "A") {
-          return "green";
-        } else if (d.data.clasify === "B") {
-          return "pink";
-        } else if (d.data.clasify === "C") {
-          return "black";
-        } else if (d.data.clasify === "D") {
-          return isColor ? "skyblue" : "gray";
-        } else if (d.data.clasify === "E") {
-          return isColor ? "darkblue" : "gray";
-        }
-        return "pink";
-      }
-
-      // NUM=値 LEN=桁数
-      function zeroPadding(NUM, LEN) {
-        return (Array(LEN).join("0") + NUM).slice(-LEN);
       }
     </script>
   </body>
